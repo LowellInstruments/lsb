@@ -49,7 +49,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True):
     cmd = cmd if type(cmd) is bytes else cmd.encode()
     global g_cmd
     g_cmd = cmd[:3]
-    pt(f'<- {cmd}')
+    pt(f'\n<- {cmd}')
     p.write_request(UUID_S, UUID_R, cmd)
     rv = _wait_ans_done()
     print('len(rx)', len(rx))
@@ -101,6 +101,7 @@ def cmd_dwl(p, z, ip=None, port=None) -> tuple:
     global rx
     rx = bytes()
     t = time.perf_counter()
+    print('sending DWL, this might take a while...')
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
         _cmd(p, cmd, i=i, z=z, empty=False)
@@ -123,6 +124,7 @@ def cmd_dwf(p, z, ip=None, port=None) -> tuple:
     t = time.perf_counter()
 
     cmd = 'DWF \r'
+    print('sending DWF, this might take a while...')
     _cmd(p, cmd, i=None, z=z, timeout=60)
 
     t = time.perf_counter() - t

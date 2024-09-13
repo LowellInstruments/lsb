@@ -2,8 +2,7 @@ import time
 
 import simplepyble
 import subprocess as sp
-from lsb.utils import pt
-
+from lsb.utils import pt, linux_is_rpi
 
 g_mac_searched_for = ''
 g_mac_found_in_scan = False
@@ -96,3 +95,29 @@ def force_disconnect(m=''):
 def my_disconnect(p):
     time.sleep(1)
     p.disconnect()
+
+
+def set_connection_parameters_in_linux(c_min, c_max, c_sto='250'):
+    with open('/tmp/ble_c_min', 'w') as f:
+        f.write(c_min)
+    with open('/tmp/ble_c_max', 'w') as f:
+        f.write(c_max)
+    with open('/tmp/ble_c_sto', 'w') as f:
+        f.write(c_sto)
+
+    if not linux_is_rpi():
+        print('cannot do this on NOT rpi')
+        return
+
+    # todo ---> do for both hci!
+    # one of these 2 orders will work
+    f = '/sys/kernel/debug/bluetooth/hci0/conn_min_interval'
+    sp.run(f'cp /tmp/c_min {f}', shell=True)
+    f = '/sys/kernel/debug/bluetooth/hci0/conn_max_interval'
+    sp.run(f'cp /tmp/c_max {f}', shell=True)
+    f = '/sys/kernel/debug/bluetooth/hci0/conn_max_interval'
+    sp.run(f'cp /tmp/c_max {f}', shell=True)
+    f = '/sys/kernel/debug/bluetooth/hci0/conn_min_interval'
+    sp.run(f'cp /tmp/c_min {f}', shell=True)
+    f = '/sys/kernel/debug/bluetooth/hci0/supervision_timeout'
+    sp.run(f'cp /tmp/c_sto {f}', shell=True)

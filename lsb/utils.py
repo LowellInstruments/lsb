@@ -1,3 +1,6 @@
+import subprocess as sp
+
+
 def pt(s):
     return print(s)
 
@@ -38,3 +41,9 @@ def cmd_dir_ans_to_dict(ls, ext='*', match=True):
             files[name.decode()] = int(ls[idx + 1])
         idx += 2
     return files
+
+
+def linux_is_rpi():
+    c = 'cat /proc/cpuinfo | grep aspberry'
+    rv = sp.run(c, shell=True)
+    return rv.returncode == 0
