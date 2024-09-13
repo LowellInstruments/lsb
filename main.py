@@ -30,12 +30,12 @@ def fxn_rx(data):
     print(f'-> {rx}')
 
 
-def send_cmd(cmd, ans_done_cond):
+def send_cmd(p, cmd, ans_done_cond):
     global rx
     rx = bytes()
     _p(f'<- {cmd}')
     p.write_request(UUID_S, UUID_T, cmd)
-    ans_done(cmd, cond)
+    return ans_done(cmd, ans_done_cond)
 
 
 def connect_test(m):
@@ -77,7 +77,7 @@ def connect_test(m):
     # write command
     cmd = b'STS \r'
     cond = "rx.startswith(b'STS 0')"
-    send_cmd(cmd, cond)
+    send_cmd(p, cmd, cond)
 
 
     # bye, bye
