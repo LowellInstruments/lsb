@@ -1,12 +1,12 @@
 import simplepyble
 
-from lsb.utils import _p
+from lsb.utils import pt
 
 
 def get_adapters():
     ads = simplepyble.Adapter.get_adapters()
     if len(ads) == 0:
-        _p('no Bluetooth adapters found')
+        pt('no Bluetooth adapters found')
     return len(ads)
 
 
@@ -32,16 +32,16 @@ def is_mac_in_found_peripherals(pp, mac):
 
 
 def connect_mac(p, mac):
-    _p(f"Connecting to {mac}...")
+    pt(f"Connecting to {mac}...")
     try:
         p.connect()
         return True
     except (Exception, ) as ex:
-        _p(f'error connect_mac -> {ex}')
+        pt(f'error connect_mac -> {ex}')
 
 
 def get_services(p):
-    _p("listing services...")
+    pt("listing services...")
     try:
         services = p.services()
         service_characteristic_pair = []
@@ -50,4 +50,4 @@ def get_services(p):
                 service_characteristic_pair.append((service.uuid(), characteristic.uuid()))
         return service_characteristic_pair
     except (Exception, ) as ex:
-        _p(f'error listing services -> {ex}')
+        pt(f'error listing services -> {ex}')

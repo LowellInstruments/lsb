@@ -1,2 +1,2 @@
-def _p(s):
+def pt(s):
     return print(s)

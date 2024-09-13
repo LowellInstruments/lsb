@@ -5,7 +5,7 @@ from lsb.lsb import (
     scan_for_peripherals, is_mac_in_found_peripherals,
     connect_mac, get_services
 )
-from lsb.utils import _p
+from lsb.utils import pt
 
 
 # let's hardcode them for now
@@ -20,7 +20,7 @@ rx = bytes()
 def cb_rx_noti(data):
     global rx
     rx += data
-    print(f'-> {rx}')
+    pt(f'-> {rx}')
 
 
 def send_cmd(p, cmd, ans_done_cond, timeout=3):
@@ -28,11 +28,11 @@ def send_cmd(p, cmd, ans_done_cond, timeout=3):
         till = time.perf_counter() + timeout
         while time.perf_counter() < till:
             if eval(ans_done_cond):
-                _p(f'ans done for cmd {cmd}')
+                pt(f'ans done for cmd {cmd}')
                 return True
     global rx
     rx = bytes()
-    _p(f'<- {cmd}')
+    pt(f'<- {cmd}')
     p.write_request(UUID_S, UUID_T, cmd)
     return _ans_done()
 
@@ -46,32 +46,32 @@ def connect_test(m):
 
     # scan
     ad.set_callback_on_scan_found(
-        lambda x: _p(f"    found - {x.identifier()} [{x.address()}]"))
+        lambda x: pt(f"    found - {x.identifier()} [{x.address()}]"))
     pp = scan_for_peripherals(ad, 5000)
 
     # see mac is within scan results
     found, i = is_mac_in_found_peripherals(pp, m)
     if not found:
-        _p('error: mac not found in scan results')
+        pt('error: mac not found in scan results')
         sys.exit(1)
 
     # connect
     p = pp[i]
     if not connect_mac(m, p):
-        _p('error: could not connect')
+        pt('error: could not connect')
         sys.exit(1)
     if not get_services(p):
-        _p('error: could not get services')
+        pt('error: could not get services')
         sys.exit(1)
 
     # display mtu
     mtu = p.get_mtu()
-    _p(f'mtu is {mtu}')
+    pt(f'mtu is {mtu}')
 
     # configure notification
     # todo ---> might be like this or the other way around UUID_T / UUID_R
     rv = p.notify(UUID_S, UUID_R, cb_rx_noti)
-    _p(f'rv set notify: {rv}')
+    pt(f'rv set notify: {rv}')
 
     # write command
     cmd = b'STS \r'
