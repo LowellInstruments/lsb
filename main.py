@@ -1,43 +1,19 @@
 import sys
-import time
-from lsb.lsb import (
+
+from lsb.cmd import *
+from lsb.li import UUID_S, UUID_T
+from lsb.connect import (
     get_adapters, get_best_adapter_idx,
     scan_for_peripherals, is_mac_in_found_peripherals,
-    connect_mac, get_services
+    connect_mac, force_disconnect, cb_scan, get_mtu, my_disconnect
 )
-from lsb.utils import pt
+from lsb.utils import pt, cmd_dir_ans_to_dict
 
 
-# let's hardcode them for now
-UUID_T = 'f0001132-0451-4000-b000-000000000000'
-UUID_R = 'f0001131-0451-4000-b000-000000000000'
-UUID_S = 'f0001130-0451-4000-b000-000000000000'
+def connect_test(m, activate_noti=True):
 
-
-rx = bytes()
-
-
-def cb_rx_noti(data):
-    global rx
-    rx += data
-    pt(f'-> {rx}')
-
-
-def send_cmd(p, cmd, ans_done_cond, timeout=3):
-    def _ans_done():
-        till = time.perf_counter() + timeout
-        while time.perf_counter() < till:
-            if eval(ans_done_cond):
-                pt(f'ans done for cmd {cmd}')
-                return True
-    global rx
-    rx = bytes()
-    pt(f'<- {cmd}')
-    p.write_request(UUID_S, UUID_T, cmd)
-    return _ans_done()
-
-
-def connect_test(m):
+    # start clean
+    force_disconnect(m)
 
     # get internal / external adapters
     ads = get_adapters()
@@ -45,44 +21,50 @@ def connect_test(m):
     ad = ads[ad_i]
 
     # scan
-    ad.set_callback_on_scan_found(
-        lambda x: pt(f"    found - {x.identifier()} [{x.address()}]"))
-    pp = scan_for_peripherals(ad, 5000)
+    ad.set_callback_on_scan_found(cb_scan)
+    pp = scan_for_peripherals(ad, 10000, m)
 
     # see mac is within scan results
     found, i = is_mac_in_found_peripherals(pp, m)
     if not found:
-        pt('error: mac not found in scan results')
         sys.exit(1)
 
     # connect
     p = pp[i]
-    if not connect_mac(m, p):
+    if not connect_mac(p, m):
         pt('error: could not connect')
         sys.exit(1)
-    if not get_services(p):
-        pt('error: could not get services')
-        sys.exit(1)
-
-    # display mtu
-    mtu = p.get_mtu()
-    pt(f'mtu is {mtu}')
 
     # configure notification
-    # todo ---> might be like this or the other way around UUID_T / UUID_R
-    rv = p.notify(UUID_S, UUID_R, cb_rx_noti)
-    pt(f'rv set notify: {rv}')
+    if activate_noti:
+        p.notify(UUID_S, UUID_T, cb_rx_noti)
 
-    # write command
-    cmd = b'STS \r'
-    cond = "rx.startswith(b'STS 0')"
-    send_cmd(p, cmd, cond)
+    # display mtu
+    # get_mtu(p)
+
+    cmd_sts(p)
+    # send_cmd_arf(p)
+    cmd_dir(p)
+
+    s = 'dummy_1661451302.lid'
+    z = 77950
+    cmd_dwg(p, s=s)
+    # cmd_dwl(p, z)
+    cmd_dwf(p, z)
+
+    cmd_crc(p, s)
 
     # bye, bye
-    time.sleep(3)
-    p.disconnect()
+    my_disconnect(p)
 
 
+# ------
+# main
+# ------
 if __name__ == "__main__":
-    mac = '11:22:33:44:55:66'
-    connect_test(mac)
+    mac = "D0:2E:AB:D9:29:48"   # TDO bread
+    connect_test(mac, activate_noti=True)
+    # try:
+    #     connect_test(mac, activate_noti=True)
+    # except (Exception, ) as ex:
+    #     pt(f'exception simpleble -> {ex}')
