@@ -1,8 +1,8 @@
 import math
 import time
-
+from datetime import datetime, timezone, timedelta
 from lsb.li import UUID_S, UUID_R
-from lsb.utils import pt, cmd_dir_ans_to_dict
+from lsb.utils import pt, cmd_dir_ans_to_dict, GPS_FRM_STR, ble_mat_progress_dl
 
 rx = bytes()
 
@@ -21,14 +21,20 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True):
     def ans_done():
         tag = cmd.decode()[:3]
         d = {
+            # todo ---> complete some of these conditions
             'ARF': lambda: rx and rx.startswith(b'ARF 020'),
             'CRC': lambda: rx and rx.startswith(b'CRC') and len(rx) == 14,
             'DIR': lambda: rx and rx.endswith(b'\x04\n\r'),
             'DWL': lambda: rx and len(rx) == (i + 1) * 2048 or \
                            rx and len(rx) == z,
-            'DWG': lambda: rx and rx == b'DWG 00',
+            'DWG': lambda: rx == b'DWG 00',
             'DWF': lambda: rx and len(rx) == z,
+            'GFV': lambda: rx and rx.startswith(b'GFV 0'),
+            'GTM': lambda: rx and rx.startswith(b'GTM'),
+            'STM': lambda: rx == b'STM 00',
             'STS': lambda: rx and rx.startswith(b'STS 020'),
+            'SWS': lambda: rx == b'SWS 00',
+            'UTM': lambda: rx and rx.startswith(b'UTM 0'),
         }
         return d[tag]()
 
@@ -41,7 +47,8 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True):
                     return rx
             pt(f'\nans BAD for cmd {cmd} -> rx {rx}')
         except (Exception, ) as ex:
-            pt(f'\nexception while send_cmd -> {ex}')
+            pt(f'\nexception while send_cmd {cmd} -> {ex}')
+            raise MyExceptionLSB(ex)
 
     global rx
     if empty:
@@ -85,6 +92,26 @@ def cmd_sts(p):
     return _cmd(p, 'STS \r')
 
 
+def cmd_gtm(p):
+    return _cmd(p, 'GTM \r')
+
+
+def cmd_utm(p):
+    return _cmd(p, 'UTM \r')
+
+
+def cmd_gfv(p):
+    return _cmd(p, 'GFV \r')
+
+
+def cmd_stm(p):
+    # time() -> seconds since epoch, in UTC
+    dt = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+    s = dt.strftime('%Y/%m/%d %H:%M:%S')
+    cmd = 'STM {:02x}{}\r'.format(len(str(s)), s)
+    return _cmd(p, cmd)
+
+
 def cmd_dir(p):
     ls_b = _cmd(p, 'DIR \r', timeout=10)
     ls = cmd_dir_ans_to_dict(ls_b)
@@ -105,13 +132,13 @@ def cmd_dwl(p, z, ip=None, port=None) -> tuple:
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
         _cmd(p, cmd, i=i, z=z, empty=False)
-        # ble_mat_progress_dl(len(self.ans), z, ip, port)
-        # print('chunk #{} len {}'.format(i, len(self.ans)))
+        ble_mat_progress_dl(len(rx), z, ip, port)
+        pt('chunk #{} len {}'.format(i, len(rx)))
 
     t = time.perf_counter() - t
     print(f'speed {(z / t)/ 1000} KBps')
-    rv = 0 if z == len(rx) else 1
-    return rv, rx
+    if len(rx) == z:
+        return rx
 
 
 def cmd_dwf(p, z, ip=None, port=None) -> tuple:
@@ -126,6 +153,8 @@ def cmd_dwf(p, z, ip=None, port=None) -> tuple:
     cmd = 'DWF \r'
     print('sending DWF, this might take a while...')
     _cmd(p, cmd, i=None, z=z, timeout=60)
+
+    # todo ---> do the progress bar thing here
 
     t = time.perf_counter() - t
     print(f'speed {(z / t) / 1000} KBps')
@@ -142,3 +171,12 @@ def cmd_crc(p, s):
     cmd = 'CRC {:02x}{}\r'.format(len(str(s)), s)
     return _cmd(p, cmd, timeout=60)
 
+
+def cmd_sws(p, g):
+    # STOP with STRING
+    lat, lon, _, __ = g
+    lat = GPS_FRM_STR.format(float(lat))
+    lon = GPS_FRM_STR.format(float(lon))
+    s = f'{lat} {lon}'
+    cmd = 'SWS {:02x}{}\r'.format(len(str(s)), s)
+    return _cmd(p, cmd, timeout=60)

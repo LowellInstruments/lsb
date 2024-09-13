@@ -42,6 +42,8 @@ def connect_test(m, activate_noti=True):
     # display mtu
     # get_mtu(p)
 
+    cmd_gfv(p)
+    cmd_gtm(p)
     cmd_sts(p)
     # send_cmd_arf(p)
     cmd_dir(p)

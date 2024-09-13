@@ -1,4 +1,13 @@
+import socket
 import subprocess as sp
+
+
+GPS_FRM_STR = '{:+.6f}'
+DDH_GUI_UDP_PORT = 12349
+STATE_DDS_BLE_DOWNLOAD_PROGRESS = 'state_dds_ble_download_progress'
+
+class MyExceptionLSB(Exception):
+    pass
 
 
 def pt(s):
@@ -47,3 +56,22 @@ def linux_is_rpi():
     c = 'cat /proc/cpuinfo | grep aspberry'
     rv = sp.run(c, shell=True)
     return rv.returncode == 0
+
+
+def ble_mat_progress_dl(data_len, size, ip='127.0.0.1', port=DDH_GUI_UDP_PORT):
+    _ = int(data_len) / int(size) * 100 if size else 0
+    _ = _ if _ < 100 else 100
+    _sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    print('{} %'.format(int(_)))
+    _ = '{}/{}'.format(STATE_DDS_BLE_DOWNLOAD_PROGRESS, _)
+
+    # always send to localhost
+    if ip:
+        _sk.sendto(str(_).encode(), (ip, port))
+
+    if ip == '127.0.0.1':
+        return
+
+    # only maybe somewhere else :)
+    # _sk.sendto(str(_).encode(), (ip, port))
+
