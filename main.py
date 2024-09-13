@@ -17,25 +17,24 @@ UUID_S = 'f0001130-0451-4000-b000-000000000000'
 rx = bytes()
 
 
-def ans_done(c, cond, timeout=3):
-    till = time.perf_counter() + timeout
-    while time.perf_counter() < till:
-        if eval(cond):
-            return True
-
-
-def fxn_rx(data):
+def cb_rx_noti(data):
     global rx
     rx += data
     print(f'-> {rx}')
 
 
-def send_cmd(p, cmd, ans_done_cond):
+def send_cmd(p, cmd, ans_done_cond, timeout=3):
+    def _ans_done():
+        till = time.perf_counter() + timeout
+        while time.perf_counter() < till:
+            if eval(ans_done_cond):
+                _p(f'ans done for cmd {cmd}')
+                return True
     global rx
     rx = bytes()
     _p(f'<- {cmd}')
     p.write_request(UUID_S, UUID_T, cmd)
-    return ans_done(cmd, ans_done_cond)
+    return _ans_done()
 
 
 def connect_test(m):
@@ -71,14 +70,13 @@ def connect_test(m):
 
     # configure notification
     # todo ---> might be like this or the other way around UUID_T / UUID_R
-    rv = p.notify(UUID_S, UUID_R, fxn_rx)
+    rv = p.notify(UUID_S, UUID_R, cb_rx_noti)
     _p(f'rv set notify: {rv}')
 
     # write command
     cmd = b'STS \r'
     cond = "rx.startswith(b'STS 0')"
     send_cmd(p, cmd, cond)
-
 
     # bye, bye
     time.sleep(3)
