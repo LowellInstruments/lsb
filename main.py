@@ -1,13 +1,11 @@
 import sys
-
 from lsb.cmd import *
 from lsb.li import UUID_S, UUID_T
 from lsb.connect import (
     get_adapters, get_best_adapter_idx,
     scan_for_peripherals, is_mac_in_found_peripherals,
-    connect_mac, force_disconnect, cb_scan, get_mtu, my_disconnect
+    connect_mac, force_disconnect, cb_scan, my_disconnect
 )
-from lsb.utils import pt, cmd_dir_ans_to_dict
 
 
 def connect_test(m, activate_noti=True):
@@ -32,7 +30,6 @@ def connect_test(m, activate_noti=True):
     # connect
     p = pp[i]
     if not connect_mac(p, m):
-        pt('error: could not connect')
         sys.exit(1)
 
     # configure notification
@@ -48,12 +45,12 @@ def connect_test(m, activate_noti=True):
     # send_cmd_arf(p)
     cmd_dir(p)
 
+    # download one
     s = 'dummy_1661451302.lid'
     z = 77950
     cmd_dwg(p, s=s)
     # cmd_dwl(p, z)
     cmd_dwf(p, z)
-
     cmd_crc(p, s)
 
     # bye, bye
@@ -66,7 +63,3 @@ def connect_test(m, activate_noti=True):
 if __name__ == "__main__":
     mac = "D0:2E:AB:D9:29:48"   # TDO bread
     connect_test(mac, activate_noti=True)
-    # try:
-    #     connect_test(mac, activate_noti=True)
-    # except (Exception, ) as ex:
-    #     pt(f'exception simpleble -> {ex}')

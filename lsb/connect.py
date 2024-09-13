@@ -2,7 +2,7 @@ import time
 
 import simplepyble
 import subprocess as sp
-from lsb.utils import pt, linux_is_rpi
+from lsb.utils import pt, linux_is_rpi, BleLsbException
 
 g_mac_searched_for = ''
 g_mac_found_in_scan = False
@@ -32,7 +32,7 @@ def get_mtu(p):
 def get_best_adapter_idx(ads):
     pt('list of BLE adapters found')
     for i, ad in enumerate(ads):
-        pt(f"  - {i}: {ad.identifier()} [{ad.address()}]")
+        pt(f"\t- {i}: {ad.identifier()} [{ad.address()}]")
     return 0
 
 
@@ -51,7 +51,7 @@ def scan_for_peripherals(ad, timeout_ms, mac=''):
         if g_mac_found_in_scan:
             if ad.scan_is_active():
                 ad.scan_stop()
-            pt(f'scan early left for mac {mac}')
+            pt(f'\tscan early left for mac {mac}')
             break
     return ad.scan_get_results()
 
@@ -65,35 +65,31 @@ def is_mac_in_found_peripherals(pp, mac):
 
 
 def connect_mac(p, mac):
+    # internally, they take care of retries
     pt(f"Connecting to {mac}...")
-    try:
-        p.connect()
-        return True
-    except (Exception, ) as ex:
-        pt(f'error connect_mac -> {ex}')
-
-
-def get_services(p):
-    pt("listing services...")
-    try:
-        services = p.services()
-        service_characteristic_pair = []
-        for service in services:
-            for characteristic in service.characteristics():
-                service_characteristic_pair.append((service.uuid(), characteristic.uuid()))
-        return service_characteristic_pair
-    except (Exception, ) as ex:
-        pt(f'error listing services -> {ex}')
+    till = time.perf_counter() + 10
+    while time.perf_counter() < till:
+        try:
+            p.connect()
+            return True
+        except (Exception, ) as ex:
+            time.sleep(.5)
+            pt('.')
+    pt(f'error connect_mac')
+    raise BleLsbException(ex)
 
 
 def force_disconnect(m=''):
     m = m.upper()
+    # try both variants, not care
+    c = f'bluetoothctl disconnect'
+    sp.run(c, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
     c = f'bluetoothctl disconnect {m}'
     sp.run(c, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
 
 
 def my_disconnect(p):
-    time.sleep(1)
+    time.sleep(.1)
     p.disconnect()
 
 
@@ -106,7 +102,7 @@ def set_connection_parameters_in_linux(c_min, c_max, c_sto='250'):
         f.write(c_sto)
 
     if not linux_is_rpi():
-        print('cannot do this on NOT rpi')
+        pt('cannot do this on NOT rpi')
         return
 
     # todo ---> do for both hci!

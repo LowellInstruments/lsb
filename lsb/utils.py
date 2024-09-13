@@ -6,7 +6,8 @@ GPS_FRM_STR = '{:+.6f}'
 DDH_GUI_UDP_PORT = 12349
 STATE_DDS_BLE_DOWNLOAD_PROGRESS = 'state_dds_ble_download_progress'
 
-class MyExceptionLSB(Exception):
+
+class BleLsbException(Exception):
     pass
 
 
@@ -58,7 +59,8 @@ def linux_is_rpi():
     return rv.returncode == 0
 
 
-def ble_mat_progress_dl(data_len, size, ip='127.0.0.1', port=DDH_GUI_UDP_PORT):
+def ble_mat_progress_dl(data_len, size, ip='127.0.0.1',
+                        port=DDH_GUI_UDP_PORT):
     _ = int(data_len) / int(size) * 100 if size else 0
     _ = _ if _ < 100 else 100
     _sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -74,4 +76,3 @@ def ble_mat_progress_dl(data_len, size, ip='127.0.0.1', port=DDH_GUI_UDP_PORT):
 
     # only maybe somewhere else :)
     # _sk.sendto(str(_).encode(), (ip, port))
-
