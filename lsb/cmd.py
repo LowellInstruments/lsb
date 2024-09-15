@@ -4,17 +4,24 @@ from datetime import datetime, timezone
 from lsb.li import UUID_S, UUID_R
 from lsb.utils import (
     pt, cmd_dir_ans_to_dict, GPS_FRM_STR,
-    ble_mat_progress_dl
+    print_dwf_progress, print_dwl_progress
 )
 
 
 rx = bytes()
 g_cmd = bytes()
+g_dwf_z = 0
+g_dwf_i = 0
+i = 0
 
 
 def cb_rx_noti(data):
     global rx
     rx += data
+    if g_cmd == b'DWF':
+        global g_dwf_i
+        g_dwf_i += 1
+        print_dwf_progress(g_dwf_i, len(rx), g_dwf_z)
     if g_cmd not in (b'DWL', b'DWF', b'DIR'):
         pt(f'-> {rx}')
 
@@ -138,7 +145,7 @@ def cmd_dwl(p, z, ip=None, port=None):
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
         _cmd(p, cmd, i=i, z=z, empty=False)
-        ble_mat_progress_dl(len(rx), z, ip, port)
+        print_dwl_progress(len(rx), z)
         pt(f'chunk #{i} len {len(rx)}')
 
     t = time.perf_counter() - t
@@ -158,9 +165,11 @@ def cmd_dwf(p, z, ip=None, port=None) -> tuple:
 
     cmd = 'DWF \r'
     pt('\tsending DWF, this might take a while...')
+    global g_dwf_z
+    global g_dwf_i
+    g_dwf_z = z
+    g_dwf_i = 0
     _cmd(p, cmd, i=None, z=z, timeout=60)
-
-    # todo ---> do the progress bar thing here
 
     t = time.perf_counter() - t
     pt(f'\tspeed {(z / t) / 1000} KBps')

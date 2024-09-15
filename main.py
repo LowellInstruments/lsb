@@ -8,10 +8,16 @@ from lsb.connect import (
 )
 
 
+# --------------------
+# todo ---> do various hci
+
+
 def connect_test(m, activate_noti=True):
 
     # start clean
     force_disconnect(m)
+
+    start = time.perf_counter()
 
     # get internal / external adapters
     ads = get_adapters()
@@ -40,21 +46,24 @@ def connect_test(m, activate_noti=True):
     # get_mtu(p)
 
     cmd_gfv(p)
-    cmd_gtm(p)
+    # cmd_gtm(p)
     cmd_sts(p)
     # send_cmd_arf(p)
-    cmd_dir(p)
+    # cmd_dir(p)
 
     # download one
     s = 'dummy_1661451302.lid'
     z = 77950
     cmd_dwg(p, s=s)
-    # cmd_dwl(p, z)
-    cmd_dwf(p, z)
-    cmd_crc(p, s)
+    cmd_dwl(p, z)
+    # cmd_dwf(p, z)
+    # cmd_crc(p, s)
 
     # bye, bye
     my_disconnect(p)
+
+    end = time.perf_counter() - start
+    print(f'it took {end} seconds')
 
 
 # ------

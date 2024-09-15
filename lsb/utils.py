@@ -5,6 +5,8 @@ import subprocess as sp
 GPS_FRM_STR = '{:+.6f}'
 DDH_GUI_UDP_PORT = 12349
 STATE_DDS_BLE_DOWNLOAD_PROGRESS = 'state_dds_ble_download_progress'
+_sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 
 
 class BleLsbException(Exception):
@@ -59,20 +61,15 @@ def linux_is_rpi():
     return rv.returncode == 0
 
 
-def ble_mat_progress_dl(data_len, size, ip='127.0.0.1',
-                        port=DDH_GUI_UDP_PORT):
-    _ = int(data_len) / int(size) * 100 if size else 0
-    _ = _ if _ < 100 else 100
-    _sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    print('{} %'.format(int(_)))
-    _ = '{}/{}'.format(STATE_DDS_BLE_DOWNLOAD_PROGRESS, _)
+def print_dwl_progress(n, z):
+    x = int((n / z) * 100)
+    pt(f'{x} %')
+    _ = '{}/{}'.format(STATE_DDS_BLE_DOWNLOAD_PROGRESS, x)
+    _sk.sendto(_.encode(), ('127.0.0.1', 12749))
 
-    # always send to localhost
-    if ip:
-        _sk.sendto(str(_).encode(), (ip, port))
 
-    if ip == '127.0.0.1':
+def print_dwf_progress(i, n, z, do_it=True):
+    if not do_it:
         return
-
-    # only maybe somewhere else :)
-    # _sk.sendto(str(_).encode(), (ip, port))
+    if (i % 10) == 0:
+        print_dwl_progress(n, z)

@@ -76,7 +76,7 @@ def connect_mac(p, mac):
             time.sleep(.5)
             pt('.')
     pt(f'error connect_mac')
-    raise BleLsbException(ex)
+    raise BleLsbException('exception connect_mac')
 
 
 def force_disconnect(m=''):
