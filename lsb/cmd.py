@@ -15,6 +15,10 @@ g_dwf_i = 0
 i = 0
 
 
+def get_rx():
+    return rx
+
+
 def cb_rx_noti(data):
     global rx
     rx += data
@@ -22,15 +26,17 @@ def cb_rx_noti(data):
         global g_dwf_i
         g_dwf_i += 1
         print_dwf_progress(g_dwf_i, len(rx), g_dwf_z)
-    if g_cmd not in (b'DWL', b'DWF', b'DIR'):
-        pt(f'-> {rx}')
+    # if g_cmd not in (b'DWL', b'DWF', b'DIR'):
+        # pt(f'-> {rx}')
 
 
-def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True):
+def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
     def ans_done():
         tag = cmd.decode()[:3]
         d = {
             # todo ---> complete some of these conditions
+            '__A': lambda: rx and rx.endswith(b'\x04\n\r'),
+            '__B': lambda: rx and rx.startswith(b'__B') and len(rx) == 38,
             'ARF': lambda: rx and rx.startswith(b'ARF 020'),
             'BAT': lambda: rx and rx.startswith(b'BAT') and len(rx) == 10,
             'CRC': lambda: rx and rx.startswith(b'CRC') and len(rx) == 14,
@@ -69,7 +75,8 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True):
     cmd = cmd if type(cmd) is bytes else cmd.encode()
     global g_cmd
     g_cmd = cmd[:3]
-    pt(f'\n<- {cmd}')
+    if verbose:
+        pt(f'\n<- {cmd}')
     p.write_request(UUID_S, UUID_R, cmd)
     rv = _wait_ans_done()
     # pt('len(rx)', len(rx))
@@ -120,6 +127,31 @@ def cmd_crc(p, s):
     return _cmd(p, cmd, timeout=60)
 
 
+def cmd_dda(p, g):
+    lat, lon, _, __ = g
+    lat = GPS_FRM_STR.format(float(lat))
+    lon = GPS_FRM_STR.format(float(lon))
+    s = f'{lat} {lon}'
+    c = '__A {:02x}{}\r'.format(len(str(s)), s)
+    ls_b = _cmd(p, c, timeout=30)
+    if not ls_b:
+        # this is an error
+        return
+    ls = cmd_dir_ans_to_dict(ls_b)
+    # this might be populated or not
+    pt(f'\tls {ls}')
+    return {'ls': ls}
+
+
+def cmd_ddb(p, rerun):
+    # time() -> seconds since epoch, in UTC
+    rerun = int(rerun)
+    dt = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+    s = f"{rerun}{dt.strftime('%Y/%m/%d %H:%M:%S')}"
+    c = '__B {:02x}{}\r'.format(len(str(s)), s)
+    return _cmd(p, c, timeout=30)
+
+
 def cmd_del(p, s):
     cmd = 'DEL {:02x}{}\r'.format(len(str(s)), s)
     return _cmd(p, cmd, timeout=3)
@@ -131,54 +163,45 @@ def cmd_dir(p):
         # this is an error
         return
     ls = cmd_dir_ans_to_dict(ls_b)
+    # pt(f'\tls {ls}')
     # this might be populated or not
-    pt(f'\tls {ls}')
     return {'ls': ls}
 
 
 def cmd_dwl(p, z, ip=None, port=None):
     # z: file size
     n = math.ceil(z / 2048)
-    # ble_mat_progress_dl(0, z, ip, port)
+    print_dwl_progress(0, z)
 
     # need to clean the first one
     global rx
     rx = bytes()
     t = time.perf_counter()
-    pt('sending DWL, this might take a while...')
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
         _cmd(p, cmd, i=i, z=z, empty=False)
         print_dwl_progress(len(rx), z)
         pt(f'chunk #{i} len {len(rx)}')
 
-    t = time.perf_counter() - t
-    pt(f'\tspeed {(z / t)/ 1000} KBps')
     if len(rx) == z:
         return rx
 
 
-def cmd_dwf(p, z, ip=None, port=None) -> tuple:
+def cmd_dwf(p, z, ip=None, port=None):
     # z: file size
     # ble_mat_progress_dl(0, z, ip, port)
 
     # need to clean the first one
     global rx
     rx = bytes()
-    t = time.perf_counter()
-
     cmd = 'DWF \r'
-    pt('\tsending DWF, this might take a while...')
     global g_dwf_z
     global g_dwf_i
     g_dwf_z = z
     g_dwf_i = 0
     _cmd(p, cmd, i=None, z=z, timeout=60)
-
-    t = time.perf_counter() - t
-    pt(f'\tspeed {(z / t) / 1000} KBps')
-    rv = 0 if z == len(rx) else 1
-    return rv, rx
+    if len(rx) == z:
+        return rx
 
 
 def cmd_dwg(p, s):
@@ -186,7 +209,7 @@ def cmd_dwg(p, s):
     return _cmd(p, cmd, timeout=3)
 
 
-def cmd_frm(p, s):
+def cmd_frm(p):
     return _cmd(p, 'FRM \r')
 
 
@@ -202,13 +225,9 @@ def cmd_gsp(vp):
     # Get Sensor Pressure
     rv = _cmd(vp, 'GSP \r')
     # rv: GSP 04ABCD
-    ok = rv and len(rv) == 10 and rv.startswith(b'GSP')
-    if not ok:
-        return
-    a = rv
-    if a and len(a.split()) == 2:
+    if rv and len(rv.split()) == 2:
         # a: b'GSP 043412'
-        _ = a.split()[1].decode()
+        _ = rv.split()[1].decode()
         vp = _[2:6]
         # p: '3412' --> '1234'
         vp = vp[-2:] + vp[:2]
@@ -218,15 +237,10 @@ def cmd_gsp(vp):
 
 def cmd_gst(p):
     # gst: Get Sensor Temperature
-    rv = _cmd(p, 'GST')
-    # rv: GST 04ABCD
-    ok = rv and len(rv) == 10 and rv.startswith(b'GST')
-    if not ok:
-        return
-    a = rv
-    # a: b'GST 043412'
-    if a and len(a.split()) == 2:
-        _ = a.split()[1].decode()
+    rv = _cmd(p, 'GST \r')
+    # rv: b'GST 043412'
+    if rv and len(rv.split()) == 2:
+        _ = rv.split()[1].decode()
         vt = _[2:6]
         # t: '3412' --> '1234'
         vt = vt[-2:] + vt[:2]

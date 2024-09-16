@@ -17,8 +17,6 @@ def connect_test(m, activate_noti=True):
     # start clean
     force_disconnect(m)
 
-    start = time.perf_counter()
-
     # get internal / external adapters
     ads = get_adapters()
     ad_i = get_best_adapter_idx(ads)
@@ -32,6 +30,8 @@ def connect_test(m, activate_noti=True):
     found, i = is_mac_in_found_peripherals(pp, m)
     if not found:
         sys.exit(1)
+
+    start = time.perf_counter()
 
     # connect
     p = pp[i]
@@ -48,16 +48,23 @@ def connect_test(m, activate_noti=True):
     cmd_gfv(p)
     # cmd_gtm(p)
     cmd_sts(p)
-    # send_cmd_arf(p)
+    # cmd_arf(p)
     # cmd_dir(p)
+
+    cmd_gst(p)
+
+    # g = '+1.111111', '-2.222222', '', ''
+    # cmd_dda(p, g)
 
     # download one
     s = 'dummy_1661451302.lid'
     z = 77950
-    cmd_dwg(p, s=s)
-    cmd_dwl(p, z)
+    # cmd_dwg(p, s=s)
+    # cmd_dwl(p, z)
     # cmd_dwf(p, z)
     # cmd_crc(p, s)
+
+    # cmd_ddb(p, rerun=False)
 
     # bye, bye
     my_disconnect(p)
