@@ -127,9 +127,13 @@ def cmd_del(p, s):
 
 def cmd_dir(p):
     ls_b = _cmd(p, 'DIR \r', timeout=10)
+    if not ls_b:
+        # this is an error
+        return
     ls = cmd_dir_ans_to_dict(ls_b)
+    # this might be populated or not
     pt(f'\tls {ls}')
-    return ls
+    return {'ls': ls}
 
 
 def cmd_dwl(p, z, ip=None, port=None):
