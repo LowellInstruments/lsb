@@ -1,6 +1,8 @@
+import json
 import math
 import time
 from datetime import datetime, timezone
+from re import findall
 from lsb.li import UUID_S, UUID_R
 from lsb.utils import (
     pt, cmd_dir_ans_to_dict, GPS_FRM_STR,
@@ -39,14 +41,16 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             '__B': lambda: rx and rx.startswith(b'__B') and len(rx) == 38,
             'ARF': lambda: rx and rx.startswith(b'ARF 020'),
             'BAT': lambda: rx and rx.startswith(b'BAT') and len(rx) == 10,
+            'CFG': lambda: rx == b'CFG 00',
             'CRC': lambda: rx and rx.startswith(b'CRC') and len(rx) == 14,
             'DEL': lambda: rx == b'DEL 00',
             'DIR': lambda: rx and rx.endswith(b'\x04\n\r'),
-            'DWL': lambda: rx and len(rx) == (i + 1) * 2048 or \
-                           rx and len(rx) == z,
+            'DWL': lambda: rx and len(rx) == (i + 1) * 2048 or rx and len(rx) == z,
             'DWG': lambda: rx == b'DWG 00',
             'DWF': lambda: rx and len(rx) == z,
             'FRM': lambda: rx == b'FRM 00',
+            'GDO': lambda: rx and rx.startswith(b'GDO') and len(rx) == 18,
+            'GDX': lambda: rx and len(findall(r"[-+]?(?:\d*\.*\d+)", rx.decode())) == 3,
             'GFV': lambda: rx and rx.startswith(b'GFV 0'),
             'GTM': lambda: rx and rx.startswith(b'GTM'),
             'GSP': lambda: rx and rx.startswith(b'GSP') and len(rx) == 10,
@@ -57,7 +61,9 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'STS': lambda: rx and rx.startswith(b'STS 020'),
             'SWS': lambda: rx == b'SWS 00',
             'UTM': lambda: rx and rx.startswith(b'UTM 0'),
-            'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8
+            'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8,
+            'XOD': lambda: rx and rx.endswith(b'.LIX')
+
         }
         return d[tag]()
 
@@ -199,7 +205,10 @@ def cmd_dwf(p, z, ip=None, port=None):
     global g_dwf_i
     g_dwf_z = z
     g_dwf_i = 0
-    _cmd(p, cmd, i=None, z=z, timeout=60)
+    # consider at least 5 KB/s for DWF
+    calc_timeout = math.ceil(z / 5000)
+    calc_timeout += 10
+    _cmd(p, cmd, i=None, z=z, timeout=calc_timeout)
     if len(rx) == z:
         return rx
 
@@ -308,3 +317,40 @@ def cmd_wak(p, s):
 def cmd_log(p):
     # (de-)activate log serial output
     return _cmd(p, 'LOG \r')
+
+
+def cmd_xod(p):
+    return _cmd(p, 'XOD \r')
+
+
+def cmd_cfg(p, cfg_d):
+    assert type(cfg_d) is dict
+    s = json.dumps(cfg_d)
+    cmd = 'CFG {:02x}{}\r'.format(len(str(s)), s)
+    return _cmd(p, cmd)
+
+
+def cmd_gdo(p):
+    rv = _cmd(p, 'GDO \r')
+    if not rv:
+        return
+    if rv and len(rv.split()) == 2:
+        # a: b'GDO 0c112233445566'
+        _ = rv.split()[1].decode()
+        dos, dop, dot = _[2:6], _[6:10], _[10:14]
+        dos = dos[-2:] + dos[:2]
+        dop = dop[-2:] + dop[:2]
+        dot = dot[-2:] + dot[:2]
+        if dos.isnumeric():
+            return dos, dop, dot
+
+
+def cmd_gdx(p):
+    rv = _cmd(p, 'GDX \r')
+    # rv: b'GDX -0.03, -0.41, 17.30'
+    if not rv:
+        return
+    a = rv[4:].decode().replace(' ', '').split(',')
+    if a and len(a) == 3:
+        dos, dop, dot = a
+        return dos, dop, dot
