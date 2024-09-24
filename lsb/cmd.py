@@ -113,11 +113,11 @@ def cmd_bat(p):
         return b
 
 
-def cmd_beh(p, rvn=4, tts=0, cpt=1, fow=0, nms=0, owb=0):
+def cmd_beh(p, rvn=4, tts=0, spc=1, fow=0, nms=0, owb=0):
     cmds = (
         f'BEH 04RVN{rvn}\r',
         f'BEH 04TTS{tts}\r',
-        f'BEH 04CPT{cpt}\r',
+        f'BEH 04SPC{spc}\r',
         f'BEH 04FOW{fow}\r',
         f'BEH 04NMS{nms}\r',
         f'BEH 04OWB{owb}\r',
