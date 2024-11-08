@@ -57,13 +57,13 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'GST': lambda: rx and rx.startswith(b'GST') and len(rx) == 10,
             'LOG': lambda: rx and rx.startswith(b'LOG') and len(rx) == 8,
             'RWS': lambda: rx == b'RWS 00',
+            'SCC': lambda: rx == b'SCC 00',
             'STM': lambda: rx == b'STM 00',
             'STS': lambda: rx and rx.startswith(b'STS 020'),
             'SWS': lambda: rx == b'SWS 00',
             'UTM': lambda: rx and rx.startswith(b'UTM 0'),
             'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8,
             'XOD': lambda: rx and rx.endswith(b'.LIX')
-
         }
         return d[tag]()
 
@@ -354,3 +354,11 @@ def cmd_gdx(p):
     if a and len(a) == 3:
         dos, dop, dot = a
         return dos, dop, dot
+
+
+def cmd_scc(p, tag, v):
+    assert len(tag) == 3
+    assert len(v) == 5
+    tag = tag.upper()
+    cmd = f'SCC 08{tag}{v}\r'
+    return _cmd(p, cmd, timeout=10)
