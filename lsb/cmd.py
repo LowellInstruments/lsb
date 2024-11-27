@@ -52,6 +52,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'GDO': lambda: rx and rx.startswith(b'GDO') and len(rx) == 18,
             'GDX': lambda: rx and len(findall(r"[-+]?(?:\d*\.*\d+)", rx.decode())) == 3,
             'GFV': lambda: rx and rx.startswith(b'GFV 0'),
+            'GLT': lambda: rx and rx.startswith(b'GLT') and len(rx) == 7,
             'GTM': lambda: rx and rx.startswith(b'GTM'),
             'GSP': lambda: rx and rx.startswith(b'GSP') and len(rx) == 10,
             'GST': lambda: rx and rx.startswith(b'GST') and len(rx) == 10,
@@ -60,6 +61,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'SCC': lambda: rx == b'SCC 00',
             'STM': lambda: rx == b'STM 00',
             'STS': lambda: rx and rx.startswith(b'STS 020'),
+            'STP': lambda: rx and rx == b'STP 00' or rx == b'STP 0200',
             'SWS': lambda: rx == b'SWS 00',
             'UTM': lambda: rx and rx.startswith(b'UTM 0'),
             'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8,
@@ -226,6 +228,10 @@ def cmd_gfv(p):
     return _cmd(p, 'GFV \r')
 
 
+def cmd_glt(p):
+    return _cmd(p, 'GLT \r')
+
+
 def cmd_gtm(p):
     return _cmd(p, 'GTM \r')
 
@@ -281,6 +287,10 @@ def cmd_stm(p):
 
 def cmd_sts(p):
     return _cmd(p, 'STS \r')
+
+
+def cmd_stp(p):
+    return _cmd(p, 'STP \r')
 
 
 def cmd_sws(p, g):
