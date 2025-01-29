@@ -36,7 +36,6 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
     def ans_done():
         tag = cmd.decode()[:3]
         d = {
-            # todo ---> complete some of these conditions
             '__A': lambda: rx and rx.endswith(b'\x04\n\r'),
             '__B': lambda: rx and rx.startswith(b'__B') and len(rx) == 38,
             'ARF': lambda: rx and rx.startswith(b'ARF 020'),
@@ -49,6 +48,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'DWG': lambda: rx == b'DWG 00',
             'DWF': lambda: rx and len(rx) == z,
             'FRM': lambda: rx == b'FRM 00',
+            'GCC': lambda: rx and len(rx) == (5 * 33) + 6,
             'GDO': lambda: rx and rx.startswith(b'GDO') and len(rx) == 18,
             'GDX': lambda: rx and len(findall(r"[-+]?(?:\d*\.*\d+)", rx.decode())) == 3,
             'GFV': lambda: rx and rx.startswith(b'GFV 0'),
@@ -371,4 +371,9 @@ def cmd_scc(p, tag, v):
     assert len(v) == 5
     tag = tag.upper()
     cmd = f'SCC 08{tag}{v}\r'
+    return _cmd(p, cmd, timeout=10)
+
+
+def cmd_gcc(p):
+    cmd = f'GCC \r'
     return _cmd(p, cmd, timeout=10)
