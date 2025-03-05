@@ -44,9 +44,11 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'CRC': lambda: rx and rx.startswith(b'CRC') and len(rx) == 14,
             'DEL': lambda: rx == b'DEL 00',
             'DIR': lambda: rx and rx.endswith(b'\x04\n\r'),
+            'DNS': lambda: rx == b'DNS 00',
             'DWL': lambda: rx and len(rx) == (i + 1) * 2048 or rx and len(rx) == z,
             'DWG': lambda: rx == b'DWG 00',
             'DWF': lambda: rx and len(rx) == z,
+            'FDS': lambda: rx == b'FDS 00',
             'FRM': lambda: rx == b'FRM 00',
             'GCC': lambda: rx and len(rx) == (5 * 33) + 6,
             'GDO': lambda: rx and rx.startswith(b'GDO') and len(rx) == 18,
@@ -57,14 +59,18 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'GSP': lambda: rx and rx.startswith(b'GSP') and len(rx) == 10,
             'GST': lambda: rx and rx.startswith(b'GST') and len(rx) == 10,
             'LOG': lambda: rx and rx.startswith(b'LOG') and len(rx) == 8,
+            'MTS': lambda: rx and rx.startswith(b'MTS') and len(rx) == 6,
             'RWS': lambda: rx == b'RWS 00',
             'SCC': lambda: rx == b'SCC 00',
             'STM': lambda: rx == b'STM 00',
             'STS': lambda: rx and rx.startswith(b'STS 020'),
             'STP': lambda: rx and rx == b'STP 00' or rx == b'STP 0200',
             'SWS': lambda: rx == b'SWS 00',
+            'TSL': lambda: rx == b'TSL 00',
+            'TST': lambda: rx == b'TST 00',
             'UTM': lambda: rx and rx.startswith(b'UTM 0'),
             'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8,
+            'WLI': lambda: rx == b'WLI 00',
             'XOD': lambda: rx and rx.endswith(b'.LIX')
         }
         return d[tag]()
@@ -113,6 +119,18 @@ def cmd_bat(p):
         b = _[-2:] + _[-4:-2]
         b = int(b, 16)
         return b
+
+
+def cmd_wli(p, sn):
+    d = {
+        'SN': sn,
+        "CA": "AABB",
+        "BA": "1234",
+        "MA": "9999999",
+    }
+    for k, v in d.items():
+        s = "{}{}".format(k, v)
+        _cmd(p, 'WLI {:02x}{}\r'.format(len(str(s)), s))
 
 
 def cmd_beh(p, rvn=4, tts=0, spc=1, fow=0, nms=0, owb=0):
@@ -228,6 +246,10 @@ def cmd_gfv(p):
     return _cmd(p, 'GFV \r')
 
 
+def cmd_mts(p):
+    return _cmd(p, 'MTS \r')
+
+
 def cmd_glt(p):
     return _cmd(p, 'GLT \r')
 
@@ -307,6 +329,14 @@ def cmd_utm(p):
     return _cmd(p, 'UTM \r')
 
 
+def cmd_tsl(p):
+    return _cmd(p, 'TSL \r')
+
+
+def cmd_tst(p):
+    return _cmd(p, 'TST \r')
+
+
 def cmd_wak(p, s):
     # (de-)activate Wake mode
     assert s in ('on', 'off')
@@ -374,6 +404,31 @@ def cmd_scc(p, tag, v):
     return _cmd(p, cmd, timeout=10)
 
 
+def cmd_scf(p, tag, v):
+    assert len(tag) == 3
+    assert len(v) == 5
+    tag = tag.upper()
+    cmd = f'SCF 08{tag}{v}\r'
+    return _cmd(p, cmd, timeout=10)
+
+
 def cmd_gcc(p):
-    cmd = f'GCC \r'
+    return _cmd(p, f'GCC \r', timeout=10)
+
+
+def cmd_dns(p, s):
+    # stands for Deployment Name Set
+    assert len(s) == 3
+    return _cmd(p, f'DNS 03{s}\r', timeout=10)
+
+
+def cmd_fds(p):
+    """
+    stands for first Deployment Set
+    :return: 0 if went OK
+    """
+    # time() -> seconds since epoch, in UTC
+    dt = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+    s = dt.strftime('%Y/%m/%d %H:%M:%S')
+    cmd = 'FDS {:02x}{}\r'.format(len(str(s)), s)
     return _cmd(p, cmd, timeout=10)
