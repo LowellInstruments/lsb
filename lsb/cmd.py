@@ -61,6 +61,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'LOG': lambda: rx and rx.startswith(b'LOG') and len(rx) == 8,
             'MTS': lambda: rx and rx.startswith(b'MTS') and len(rx) == 6,
             'RWS': lambda: rx == b'RWS 00',
+            'SCF': lambda: rx == b'SCF 00',
             'SCC': lambda: rx == b'SCC 00',
             'STM': lambda: rx == b'STM 00',
             'STS': lambda: rx and rx.startswith(b'STS 020'),
