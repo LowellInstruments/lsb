@@ -32,7 +32,7 @@ def cb_rx_noti(data):
         # pt(f'-> {rx}')
 
 
-def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
+def _cmd(p, cmd, i=None, z=None, timeout=10, empty=True, verbose=False):
     def ans_done():
         tag = cmd.decode()[:3]
         d = {
@@ -67,8 +67,8 @@ def _cmd(p, cmd, i=None, z=None, timeout=3, empty=True, verbose=False):
             'STS': lambda: rx and rx.startswith(b'STS 020'),
             'STP': lambda: rx and rx == b'STP 00' or rx == b'STP 0200',
             'SWS': lambda: rx == b'SWS 00',
-            'TSL': lambda: rx == b'TSL 00',
-            'TST': lambda: rx == b'TST 00',
+            'TSL': lambda: rx == b'TSL 0200',
+            'TST': lambda: rx == b'TST 0200',
             'UTM': lambda: rx and rx.startswith(b'UTM 0'),
             'WAK': lambda: rx and rx.startswith(b'WAK') and len(rx) == 8,
             'WLI': lambda: rx == b'WLI 00',
@@ -331,11 +331,11 @@ def cmd_utm(p):
 
 
 def cmd_tsl(p):
-    return _cmd(p, 'TSL \r')
+    return _cmd(p, 'TSL \r', timeout=600)
 
 
 def cmd_tst(p):
-    return _cmd(p, 'TST \r')
+    return _cmd(p, 'TST \r', timeout=120)
 
 
 def cmd_wak(p, s):

@@ -67,15 +67,14 @@ def is_mac_in_found_peripherals(pp, mac):
 def connect_mac(p, mac):
     # internally, they take care of retries
     pt(f"Connecting to {mac}...")
-    till = time.perf_counter() + 10
+    till = time.perf_counter() + 20
     while time.perf_counter() < till:
         try:
             p.connect()
             return True
         except (Exception, ) as ex:
-            time.sleep(.5)
-            pt('.')
-    pt(f'error connect_mac')
+            pt(f'error connect_mac -> {ex}')
+            time.sleep(.1)
     raise BleLsbException('exception connect_mac')
 
 
