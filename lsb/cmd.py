@@ -203,12 +203,11 @@ def cmd_dwl(p, z, ip=None, port=None):
     # need to clean the first one
     global rx
     rx = bytes()
-    t = time.perf_counter()
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
         _cmd(p, cmd, i=i, z=z, empty=False)
         print_dwl_progress(len(rx), z)
-        pt(f'chunk #{i} len {len(rx)}')
+        # pt(f'chunk #{i} len {len(rx)}')
 
     if len(rx) == z:
         return rx
@@ -248,7 +247,7 @@ def cmd_gfv(p):
 
 
 def cmd_mts(p):
-    return _cmd(p, 'MTS \r')
+    return _cmd(p, 'MTS \r', timeout=30)
 
 
 def cmd_glt(p):

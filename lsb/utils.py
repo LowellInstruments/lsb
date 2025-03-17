@@ -63,7 +63,7 @@ def linux_is_rpi():
 
 def print_dwl_progress(n, z):
     x = int((n / z) * 100)
-    pt(f'{x} %')
+    # pt(f'{x} %')
     _ = '{}/{}'.format(STATE_DDS_BLE_DOWNLOAD_PROGRESS, x)
     _sk.sendto(_.encode(), ('127.0.0.1', 12749))
 
