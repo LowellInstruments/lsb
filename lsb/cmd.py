@@ -110,6 +110,7 @@ def cmd_arf(p):
 
 def cmd_bat(p):
     rv = _cmd(p, 'BAT \r')
+    # rv: b'BAT 040000'
     ok = rv and len(rv) == 10 and rv.startswith(b'BAT')
     if not ok:
         return
