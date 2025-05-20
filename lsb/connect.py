@@ -81,9 +81,9 @@ def connect_mac(p, mac):
 def force_disconnect(m=''):
     m = m.upper()
     # try both variants, not care
-    c = f'bluetoothctl disconnect'
+    c = f'timeout 3 bluetoothctl disconnect'
     sp.run(c, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-    c = f'bluetoothctl disconnect {m}'
+    c = f'timeout 3 bluetoothctl disconnect {m}'
     sp.run(c, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
 
 
