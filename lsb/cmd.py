@@ -10,7 +10,7 @@ from lsb.utils import (
 )
 
 
-rx = bytes()
+g_rx = bytes()
 g_cmd = bytes()
 g_dwf_z = 0
 g_dwf_i = 0
@@ -18,11 +18,11 @@ i = 0
 
 
 def get_rx():
-    return rx
+    return g_rx
 
 
 def cb_rx_noti(data):
-    global rx
+    global g_rx
     rx += data
     if g_cmd == b'DWF':
         global g_dwf_i
@@ -84,7 +84,7 @@ def _cmd(p, cmd, i=None, z=None, timeout=10, empty=True, verbose=False):
                 return rx
         pt(f'\nans BAD for cmd {cmd} -> rx {rx}')
 
-    global rx
+    global g_rx
     if empty:
         rx = bytes()
     cmd = cmd if type(cmd) is bytes else cmd.encode()
@@ -202,7 +202,7 @@ def cmd_dwl(p, z, ip=None, port=None):
     print_dwl_progress(0, z)
 
     # need to clean the first one
-    global rx
+    global g_rx
     rx = bytes()
     for i in range(n):
         cmd = 'DWL {:02x}{}\r'.format(len(str(i)), i)
@@ -219,7 +219,7 @@ def cmd_dwf(p, z, ip=None, port=None):
     # ble_mat_progress_dl(0, z, ip, port)
 
     # need to clean the first one
-    global rx
+    global g_rx
     rx = bytes()
     cmd = 'DWF \r'
     global g_dwf_z
